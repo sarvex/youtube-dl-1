@@ -25,14 +25,14 @@ class BehindKinkIE(InfoExtractor):
 
     def _real_extract(self, url):
         mobj = re.match(self._VALID_URL, url)
-        display_id = mobj.group('id')
+        display_id = mobj['id']
 
         webpage = self._download_webpage(url, display_id)
 
         video_url = self._search_regex(
             r'<source src="([^"]+)"', webpage, 'video URL')
         video_id = url_basename(video_url).split('_')[0]
-        upload_date = mobj.group('year') + mobj.group('month') + mobj.group('day')
+        upload_date = mobj['year'] + mobj['month'] + mobj['day']
 
         return {
             'id': video_id,

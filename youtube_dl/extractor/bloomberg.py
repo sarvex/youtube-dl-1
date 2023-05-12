@@ -60,7 +60,8 @@ class BloombergIE(InfoExtractor):
         title = re.sub(': Video$', '', self._og_search_title(webpage))
 
         embed_info = self._download_json(
-            'http://www.bloomberg.com/api/embed?id=%s' % video_id, video_id)
+            f'http://www.bloomberg.com/api/embed?id={video_id}', video_id
+        )
         formats = []
         for stream in embed_info['streams']:
             stream_url = stream.get('url')

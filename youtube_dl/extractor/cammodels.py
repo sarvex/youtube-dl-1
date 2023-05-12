@@ -42,8 +42,7 @@ class CamModelsIE(InfoExtractor):
                 expected = False
             raise ExtractorError(error, expected=expected)
 
-        manifest = self._download_json(
-            '%s%s.json' % (manifest_root, user_id), user_id)
+        manifest = self._download_json(f'{manifest_root}{user_id}.json', user_id)
 
         formats = []
         for format_id, format_dict in manifest['formats'].items():
@@ -79,11 +78,11 @@ class CamModelsIE(InfoExtractor):
                 if 'rtmp' in format_id:
                     f['ext'] = 'flv'
                 elif 'hls' in format_id:
-                    f.update({
+                    f |= {
                         'ext': 'mp4',
                         # hls skips fragments, preferring rtmp
                         'preference': -1,
-                    })
+                    }
                 else:
                     continue
                 formats.append(f)

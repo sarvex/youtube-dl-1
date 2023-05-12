@@ -44,11 +44,12 @@ class BravoTVIE(AdobePassIE):
             'mbr': 'true',
         }
         account_pid, release_pid = [None] * 2
-        tve = settings.get('ls_tve')
-        if tve:
+        if tve := settings.get('ls_tve'):
             query['manifest'] = 'm3u'
-            mobj = re.search(r'<[^>]+id="pdk-player"[^>]+data-url=["\']?(?:https?:)?//player\.theplatform\.com/p/([^/]+)/(?:[^/]+/)*select/([^?#&"\']+)', webpage)
-            if mobj:
+            if mobj := re.search(
+                r'<[^>]+id="pdk-player"[^>]+data-url=["\']?(?:https?:)?//player\.theplatform\.com/p/([^/]+)/(?:[^/]+/)*select/([^?#&"\']+)',
+                webpage,
+            ):
                 account_pid, tp_path = mobj.groups()
                 release_pid = tp_path.strip('/').split('/')[-1]
             else:
@@ -71,20 +72,23 @@ class BravoTVIE(AdobePassIE):
             tp_path = release_pid = metadata.get('release_pid')
             if not release_pid:
                 release_pid = metadata['guid']
-                tp_path = 'media/guid/2140479951/' + release_pid
-            info.update({
+                tp_path = f'media/guid/2140479951/{release_pid}'
+            info |= {
                 'title': metadata['title'],
                 'description': metadata.get('description'),
                 'season_number': int_or_none(metadata.get('season_num')),
                 'episode_number': int_or_none(metadata.get('episode_num')),
-            })
+            }
             query['switch'] = 'progressive'
-        info.update({
+        info |= {
             '_type': 'url_transparent',
             'id': release_pid,
-            'url': smuggle_url(update_url_query(
-                'http://link.theplatform.com/s/%s/%s' % (account_pid, tp_path),
-                query), {'force_smil_url': True}),
+            'url': smuggle_url(
+                update_url_query(
+                    f'http://link.theplatform.com/s/{account_pid}/{tp_path}', query
+                ),
+                {'force_smil_url': True},
+            ),
             'ie_key': 'ThePlatform',
-        })
+        }
         return info

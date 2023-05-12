@@ -73,12 +73,14 @@ class BIQLEIE(InfoExtractor):
             if f_id == 'external':
                 return self.url_result(f_url)
             ext, height = f_id.split('_')
-            formats.append({
-                'format_id': height + 'p',
-                'url': f_url,
-                'height': int_or_none(height),
-                'ext': ext,
-            })
+            formats.append(
+                {
+                    'format_id': f'{height}p',
+                    'url': f_url,
+                    'height': int_or_none(height),
+                    'ext': ext,
+                }
+            )
         self._sort_formats(formats)
 
         thumbnails = []

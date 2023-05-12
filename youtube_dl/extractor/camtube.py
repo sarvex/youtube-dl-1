@@ -33,14 +33,18 @@ class CamTubeIE(InfoExtractor):
         display_id = self._match_id(url)
 
         token = self._download_json(
-            '%s/rpc/session/new' % self._API_BASE, display_id,
-            'Downloading session token')['token']
+            f'{self._API_BASE}/rpc/session/new',
+            display_id,
+            'Downloading session token',
+        )['token']
 
         self._set_cookie('api.camtube.co', 'session', token)
 
         video = self._download_json(
-            '%s/recordings/%s' % (self._API_BASE, display_id), display_id,
-            headers={'Referer': url})
+            f'{self._API_BASE}/recordings/{display_id}',
+            display_id,
+            headers={'Referer': url},
+        )
 
         video_id = video['uuid']
         timestamp = unified_timestamp(video.get('createdAt'))
@@ -49,13 +53,14 @@ class CamTubeIE(InfoExtractor):
         like_count = int_or_none(video.get('likeCount'))
         creator = video.get('stageName')
 
-        formats = [{
-            'url': '%s/recordings/%s/manifest.m3u8'
-                   % (self._API_BASE, video_id),
-            'format_id': 'hls',
-            'ext': 'mp4',
-            'protocol': 'm3u8_native',
-        }]
+        formats = [
+            {
+                'url': f'{self._API_BASE}/recordings/{video_id}/manifest.m3u8',
+                'format_id': 'hls',
+                'ext': 'mp4',
+                'protocol': 'm3u8_native',
+            }
+        ]
 
         return {
             'id': video_id,

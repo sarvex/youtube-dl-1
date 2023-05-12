@@ -45,12 +45,14 @@ class BpbIE(InfoExtractor):
             if not video_url:
                 continue
             quality = 'high' if '_high' in video_url else 'low'
-            formats.append({
-                'url': video_url,
-                'preference': 10 if quality == 'high' else 0,
-                'format_note': quality,
-                'format_id': '%s-%s' % (quality, determine_ext(video_url)),
-            })
+            formats.append(
+                {
+                    'url': video_url,
+                    'preference': 10 if quality == 'high' else 0,
+                    'format_note': quality,
+                    'format_id': f'{quality}-{determine_ext(video_url)}',
+                }
+            )
 
         self._sort_formats(formats)
 

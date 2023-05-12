@@ -38,9 +38,12 @@ class BitChuteIE(InfoExtractor):
         video_id = self._match_id(url)
 
         webpage = self._download_webpage(
-            'https://www.bitchute.com/video/%s' % video_id, video_id, headers={
+            f'https://www.bitchute.com/video/{video_id}',
+            video_id,
+            headers={
                 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.57 Safari/537.36',
-            })
+            },
+        )
 
         title = self._html_search_regex(
             (r'<[^>]+\bid=["\']video-title[^>]+>([^<]+)', r'<title>([^<]+)'),
@@ -48,10 +51,12 @@ class BitChuteIE(InfoExtractor):
             'description', webpage, 'title',
             default=None) or self._og_search_description(webpage)
 
-        format_urls = []
-        for mobj in re.finditer(
-                r'addWebSeed\s*\(\s*(["\'])(?P<url>(?:(?!\1).)+)\1', webpage):
-            format_urls.append(mobj.group('url'))
+        format_urls = [
+            mobj.group('url')
+            for mobj in re.finditer(
+                r'addWebSeed\s*\(\s*(["\'])(?P<url>(?:(?!\1).)+)\1', webpage
+            )
+        ]
         format_urls.extend(re.findall(r'as=(https?://[^&"\']+)', webpage))
 
         formats = [
@@ -104,22 +109,27 @@ class BitChuteChannelIE(InfoExtractor):
     _TOKEN = 'zyG6tQcGPE5swyAEFLqKUwMuMMuF6IO2DZ6ZDQjGfsL0e4dcTLwqkTTul05Jdve7'
 
     def _entries(self, channel_id):
-        channel_url = 'https://www.bitchute.com/channel/%s/' % channel_id
+        channel_url = f'https://www.bitchute.com/channel/{channel_id}/'
         offset = 0
         for page_num in itertools.count(1):
             data = self._download_json(
-                '%sextend/' % channel_url, channel_id,
+                f'{channel_url}extend/',
+                channel_id,
                 'Downloading channel page %d' % page_num,
-                data=urlencode_postdata({
-                    'csrfmiddlewaretoken': self._TOKEN,
-                    'name': '',
-                    'offset': offset,
-                }), headers={
+                data=urlencode_postdata(
+                    {
+                        'csrfmiddlewaretoken': self._TOKEN,
+                        'name': '',
+                        'offset': offset,
+                    }
+                ),
+                headers={
                     'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
                     'Referer': channel_url,
                     'X-Requested-With': 'XMLHttpRequest',
-                    'Cookie': 'csrftoken=%s' % self._TOKEN,
-                })
+                    'Cookie': f'csrftoken={self._TOKEN}',
+                },
+            )
             if data.get('success') is False:
                 break
             html = data.get('html')
@@ -133,8 +143,10 @@ class BitChuteChannelIE(InfoExtractor):
             offset += len(video_ids)
             for video_id in video_ids:
                 yield self.url_result(
-                    'https://www.bitchute.com/video/%s' % video_id,
-                    ie=BitChuteIE.ie_key(), video_id=video_id)
+                    f'https://www.bitchute.com/video/{video_id}',
+                    ie=BitChuteIE.ie_key(),
+                    video_id=video_id,
+                )
 
     def _real_extract(self, url):
         channel_id = self._match_id(url)

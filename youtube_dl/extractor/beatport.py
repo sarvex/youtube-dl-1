@@ -41,8 +41,8 @@ class BeatportIE(InfoExtractor):
 
     def _real_extract(self, url):
         mobj = re.match(self._VALID_URL, url)
-        track_id = mobj.group('id')
-        display_id = mobj.group('display_id')
+        track_id = mobj['id']
+        display_id = mobj['display_id']
 
         webpage = self._download_webpage(url, display_id)
 

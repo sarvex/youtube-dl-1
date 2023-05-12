@@ -114,7 +114,9 @@ class BiliBiliIE(InfoExtractor):
 
     def _report_error(self, result):
         if 'message' in result:
-            raise ExtractorError('%s said: %s' % (self.IE_NAME, result['message']), expected=True)
+            raise ExtractorError(
+                f"{self.IE_NAME} said: {result['message']}", expected=True
+            )
         elif 'code' in result:
             raise ExtractorError('%s returns error %d' % (self.IE_NAME, result['code']), expected=True)
         else:
@@ -124,8 +126,8 @@ class BiliBiliIE(InfoExtractor):
         url, smuggled_data = unsmuggle_url(url, {})
 
         mobj = re.match(self._VALID_URL, url)
-        video_id = mobj.group('id') or mobj.group('id_bv')
-        anime_id = mobj.group('anime_id')
+        video_id = mobj['id'] or mobj['id_bv']
+        anime_id = mobj['anime_id']
         webpage = self._download_webpage(url, video_id)
 
         if 'anime/' not in url:
@@ -139,13 +141,14 @@ class BiliBiliIE(InfoExtractor):
                 webpage, 'player parameters'))['cid'][0]
         else:
             if 'no_bangumi_tip' not in smuggled_data:
-                self.to_screen('Downloading episode %s. To download all videos in anime %s, re-run youtube-dl with %s' % (
-                    video_id, anime_id, compat_urlparse.urljoin(url, '//bangumi.bilibili.com/anime/%s' % anime_id)))
+                self.to_screen(
+                    f"Downloading episode {video_id}. To download all videos in anime {anime_id}, re-run youtube-dl with {compat_urlparse.urljoin(url, f'//bangumi.bilibili.com/anime/{anime_id}')}"
+                )
             headers = {
                 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
                 'Referer': url
             }
-            headers.update(self.geo_verification_headers())
+            headers |= self.geo_verification_headers()
 
             js = self._download_json(
                 'http://bangumi.bilibili.com/web_api/get_source', video_id,
@@ -159,19 +162,22 @@ class BiliBiliIE(InfoExtractor):
             'Accept': 'application/json',
             'Referer': url
         }
-        headers.update(self.geo_verification_headers())
+        headers |= self.geo_verification_headers()
 
         entries = []
 
         RENDITIONS = ('qn=80&quality=80&type=', 'quality=2&type=mp4')
         for num, rendition in enumerate(RENDITIONS, start=1):
-            payload = 'appkey=%s&cid=%s&otype=json&%s' % (self._APP_KEY, cid, rendition)
+            payload = f'appkey={self._APP_KEY}&cid={cid}&otype=json&{rendition}'
             sign = hashlib.md5((payload + self._BILIBILI_KEY).encode('utf-8')).hexdigest()
 
             video_info = self._download_json(
-                'http://interface.bilibili.com/v2/playurl?%s&sign=%s' % (payload, sign),
-                video_id, note='Downloading video info page',
-                headers=headers, fatal=num == len(RENDITIONS))
+                f'http://interface.bilibili.com/v2/playurl?{payload}&sign={sign}',
+                video_id,
+                note='Downloading video info page',
+                headers=headers,
+                fatal=num == len(RENDITIONS),
+            )
 
             if not video_info:
                 continue
@@ -186,13 +192,14 @@ class BiliBiliIE(InfoExtractor):
                     'url': durl['url'],
                     'filesize': int_or_none(durl['size']),
                 }]
-                for backup_url in durl.get('backup_url', []):
-                    formats.append({
+                formats.extend(
+                    {
                         'url': backup_url,
                         # backup URLs have lower priorities
                         'preference': -2 if 'hd.mp4' in backup_url else -3,
-                    })
-
+                    }
+                    for backup_url in durl.get('backup_url', [])
+                )
                 for a_format in formats:
                     a_format.setdefault('http_headers', {}).update({
                         'Referer': url,
@@ -200,11 +207,13 @@ class BiliBiliIE(InfoExtractor):
 
                 self._sort_formats(formats)
 
-                entries.append({
-                    'id': '%s_part%s' % (video_id, idx),
-                    'duration': float_or_none(durl.get('length'), 1000),
-                    'formats': formats,
-                })
+                entries.append(
+                    {
+                        'id': f'{video_id}_part{idx}',
+                        'duration': float_or_none(durl.get('length'), 1000),
+                        'formats': formats,
+                    }
+                )
             break
 
         title = self._html_search_regex(
@@ -228,14 +237,11 @@ class BiliBiliIE(InfoExtractor):
             'duration': float_or_none(video_info.get('timelength'), scale=1000),
         }
 
-        uploader_mobj = re.search(
+        if uploader_mobj := re.search(
             r'<a[^>]+href="(?:https?:)?//space\.bilibili\.com/(?P<id>\d+)"[^>]*>(?P<name>[^<]+)',
-            webpage)
-        if uploader_mobj:
-            info.update({
-                'uploader': uploader_mobj.group('name'),
-                'uploader_id': uploader_mobj.group('id'),
-            })
+            webpage,
+        ):
+            info |= {'uploader': uploader_mobj['name'], 'uploader_id': uploader_mobj['id']}
         if not info.get('uploader'):
             info['uploader'] = self._html_search_meta(
                 'author', webpage, 'uploader', default=None)
@@ -245,17 +251,16 @@ class BiliBiliIE(InfoExtractor):
 
         if len(entries) == 1:
             return entries[0]
-        else:
-            for idx, entry in enumerate(entries):
-                entry['id'] = '%s_part%d' % (video_id, (idx + 1))
+        for idx, entry in enumerate(entries):
+            entry['id'] = '%s_part%d' % (video_id, (idx + 1))
 
-            return {
-                '_type': 'multi_video',
-                'id': video_id,
-                'title': title,
-                'description': description,
-                'entries': entries,
-            }
+        return {
+            '_type': 'multi_video',
+            'id': video_id,
+            'title': title,
+            'description': description,
+            'entries': entries,
+        }
 
 
 class BiliBiliBangumiIE(InfoExtractor):
@@ -306,8 +311,10 @@ class BiliBiliBangumiIE(InfoExtractor):
 
         # Sometimes this API returns a JSONP response
         season_info = self._download_json(
-            'http://bangumi.bilibili.com/jsonp/seasoninfo/%s.ver' % bangumi_id,
-            bangumi_id, transform_source=strip_jsonp)['result']
+            f'http://bangumi.bilibili.com/jsonp/seasoninfo/{bangumi_id}.ver',
+            bangumi_id,
+            transform_source=strip_jsonp,
+        )['result']
 
         entries = [{
             '_type': 'url_transparent',
@@ -330,8 +337,10 @@ class BilibiliAudioBaseIE(InfoExtractor):
         if not query:
             query = {'sid': sid}
         return self._download_json(
-            'https://www.bilibili.com/audio/music-service-c/web/' + path,
-            sid, query=query)['data']
+            f'https://www.bilibili.com/audio/music-service-c/web/{path}',
+            sid,
+            query=query,
+        )['data']
 
 
 class BilibiliAudioIE(BilibiliAudioBaseIE):
@@ -374,8 +383,7 @@ class BilibiliAudioIE(BilibiliAudioBaseIE):
         statistic = song.get('statistic') or {}
 
         subtitles = None
-        lyric = song.get('lyric')
-        if lyric:
+        if lyric := song.get('lyric'):
             subtitles = {
                 'origin': [{
                     'url': lyric,
@@ -418,17 +426,18 @@ class BilibiliAudioAlbumIE(BilibiliAudioBaseIE):
 
         entries = []
         for song in songs:
-            sid = str_or_none(song.get('id'))
-            if not sid:
-                continue
-            entries.append(self.url_result(
-                'https://www.bilibili.com/audio/au' + sid,
-                BilibiliAudioIE.ie_key(), sid))
+            if sid := str_or_none(song.get('id')):
+                entries.append(
+                    self.url_result(
+                        f'https://www.bilibili.com/audio/au{sid}',
+                        BilibiliAudioIE.ie_key(),
+                        sid,
+                    )
+                )
 
         if entries:
             album_data = self._call_api('menu/info', am_id) or {}
-            album_title = album_data.get('title')
-            if album_title:
+            if album_title := album_data.get('title'):
                 for entry in entries:
                     entry['album'] = album_title
                 return self.playlist_result(
@@ -447,5 +456,7 @@ class BiliBiliPlayerIE(InfoExtractor):
     def _real_extract(self, url):
         video_id = self._match_id(url)
         return self.url_result(
-            'http://www.bilibili.tv/video/av%s/' % video_id,
-            ie=BiliBiliIE.ie_key(), video_id=video_id)
+            f'http://www.bilibili.tv/video/av{video_id}/',
+            ie=BiliBiliIE.ie_key(),
+            video_id=video_id,
+        )

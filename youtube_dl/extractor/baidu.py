@@ -29,8 +29,11 @@ class BaiduVideoIE(InfoExtractor):
     }]
 
     def _call_api(self, path, category, playlist_id, note):
-        return self._download_json('http://app.video.baidu.com/%s/?worktype=adnative%s&id=%s' % (
-            path, category, playlist_id), playlist_id, note)
+        return self._download_json(
+            f'http://app.video.baidu.com/{path}/?worktype=adnative{category}&id={playlist_id}',
+            playlist_id,
+            note,
+        )
 
     def _real_extract(self, url):
         category, playlist_id = re.match(self._VALID_URL, url).groups()

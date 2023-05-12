@@ -60,18 +60,20 @@ class BeegIE(InfoExtractor):
             qs = compat_urlparse.parse_qs(compat_urlparse.urlparse(url).query)
             t = qs.get('t', [''])[0].split('-')
             if len(t) > 1:
-                query.update({
+                query |= {
                     's': t[0],
                     'e': t[1],
-                })
+                }
         else:
             query = {'v': 1}
 
         for api_path in ('', 'api.'):
             video = self._download_json(
-                'https://%sbeeg.com/api/v6/%s/video/%s'
-                % (api_path, beeg_version, video_id), video_id,
-                fatal=api_path == 'api.', query=query)
+                f'https://{api_path}beeg.com/api/v6/{beeg_version}/video/{video_id}',
+                video_id,
+                fatal=api_path == 'api.',
+                query=query,
+            )
             if video:
                 break
 
@@ -79,16 +81,21 @@ class BeegIE(InfoExtractor):
         for format_id, video_url in video.items():
             if not video_url:
                 continue
-            height = self._search_regex(
-                r'^(\d+)[pP]$', format_id, 'height', default=None)
-            if not height:
-                continue
-            formats.append({
-                'url': self._proto_relative_url(
-                    video_url.replace('{DATA_MARKERS}', 'data=pc_XX__%s_0' % beeg_version), 'https:'),
-                'format_id': format_id,
-                'height': int(height),
-            })
+            if height := self._search_regex(
+                r'^(\d+)[pP]$', format_id, 'height', default=None
+            ):
+                formats.append(
+                    {
+                        'url': self._proto_relative_url(
+                            video_url.replace(
+                                '{DATA_MARKERS}', f'data=pc_XX__{beeg_version}_0'
+                            ),
+                            'https:',
+                        ),
+                        'format_id': format_id,
+                        'height': int(height),
+                    }
+                )
         self._sort_formats(formats)
 
         title = video['title']
